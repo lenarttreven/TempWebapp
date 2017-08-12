@@ -1,0 +1,202 @@
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>   
+<!--<script src="/static/jquery.js"></script> -->
+
+
+<div class="message-container error" style="display:none; color:black; background:red"></div>
+<div class="message-container warning" style="display:none;"></div>
+<div class="message-container message" style="display:none; color: black; background:green"></div>
+<h1>Temperatures</h1>
+
+<!-- <div><textarea name="body" rows="20" cols="80"></textarea></div> -->
+<table cellborder="1">
+     <tr>
+        <td>Temperature</td>
+        <td>Location</td>
+        <td>ID</td>
+    </tr>
+    <tr>
+        <td><textarea name="" id="textTemp" cols="40" rows="2"></textarea></td>
+        <td><textarea name="" id="textLoc" cols="40" rows="2"></textarea></td>
+        <td><textarea name="" id="textID" cols="40" rows="2"></textarea></td>
+    </tr>
+</table>
+
+
+ <button type="button" onclick="insertTemp()">Insert temperature</button> 
+ <button type="button" onclick="updateTemp()">Update temperature</button> 
+ <button type="button" onclick="deleteID()">Delete ID</button> 
+ <button type="button" onclick="deleteTemp()">Delete temperature</button> 
+ <button type="button" onclick="deleteLoc()">Delete location</button> 
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Temperature</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody id="temperatures">
+
+</tbody>
+</table>
+ <script>
+
+$( document ).ready(function() {
+    reloadData();
+});
+
+
+
+makePostCall = function (url, data, ok_func) {
+    var json_data = JSON.stringify(data);
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: json_data,
+        dataType: "json",
+        contentType: "application/json;charset=utf-8",
+        success: ok_func
+    });
+}
+
+ function insertTemp(){
+    var temperature = document.getElementById('textTemp').value;
+    $('#textTemp').val('');
+    
+    var location = document.getElementById('textLoc').value;
+    $('#textLoc').val('');
+
+    console.log("insertTemp " + temperature + location);
+    console.log("location " + location);
+
+    makePostCall('/webapi?method=insertTemp', {'ID' : '0', 'Temperature' : temperature, 'Location' : location}, function(data){
+        
+        if (data.Status == "OK"){
+             ShowMessage(data.Status + ' ' + data.Description, "message")
+        } else{
+            ShowMessage(data.Status + ' ' + data.Description, "error")
+        }
+
+        console.log(data.Status);
+        console.log(data.Data);
+        console.log(data);
+        reloadData();
+        
+    });
+ }
+
+function reloadData() {
+    makePostCall('/webapi?method=getData', {}, 
+        function(data){
+            console.log(data);
+            var temps = data.data; 
+            $('#temperatures').empty();
+            temps.forEach(function(item){
+            $('#temperatures').append('<tr><td>'+escapeXml(item.ID)+'</td><td>'+escapeXml(item.Temperature)+'</td><td>'+escapeXml(item.Location)+'</td></tr>')
+});
+
+    });
+}
+
+
+ function updateTemp(){
+    var temperature = document.getElementById('textTemp').value;
+    var id = document.getElementById('textID').value;
+    $('#textTemp').val('');
+    $('#textID').val('');
+    console.log("updateTemp " + temperature);
+
+    makePostCall('/webapi?method=updateTemp', {'ID' : id, 'Temperature' : temperature, 'Location' : ''}, function(data){
+        if (data.Status == "OK"){
+             ShowMessage(data.Status + ' ' + data.Description, "message")
+        } else{
+            ShowMessage(data.Status + ' ' + data.Description, "error")
+        }
+    });
+    reloadData();
+ }
+
+ function deleteID(){
+    var message = document.getElementById('textID').value;
+    $('#textID').val('');
+    console.log("deleteID " + message );
+
+    makePostCall('/webapi?method=deleteID', {'ID' : message, 'Temperature' : '0', 'Location' : ''}, function(data){
+        if (data.Status == "OK"){
+             ShowMessage(data.Status + ' ' + data.Description, "message")
+        } else{
+            ShowMessage(data.Status + ' ' + data.Description, "error")
+        }
+    });
+    reloadData();
+ }
+
+ function deleteTemp(){
+    var message = $('#textTemp').val();
+    $('#textTemp').val('');
+    console.log("deleteTemp " + message);
+
+    makePostCall('/webapi?method=deleteTemp', {'ID' : '0', 'Temperature' : message, 'Location' : ''}, function(data){
+        if (data.Status == "OK"){
+             ShowMessage(data.Status + ' ' + data.Description, "message")
+        } else{
+            ShowMessage(data.Status + ' ' + data.Description, "error")
+        }
+    })
+    reloadData();
+ }
+
+ function deleteLoc(){
+    var location = $('#textLoc').val();
+    $('#textLoc').val('');
+    console.log("delete location " + location);
+    makePostCall('/webapi?method=deleteLoc', {'ID' : '0', 'Temperature' : '0', 'Location' : location}, function(data){
+        if (data.Status == "OK"){
+             ShowMessage(data.Status + ' ' + data.Description, "message")
+        } else{
+            ShowMessage(data.Status + ' ' + data.Description, "error")
+        }
+    })
+    reloadData();
+ }
+
+
+function ShowMessage(messageString, messageType, append, newline) {
+    if (!isSet(append) || true !== append) {
+        append = false;
+    }
+    $('.message-container').hide();
+
+    setTimeout(function () {
+        if ('' !== messageString && null !== messageString) {
+            if (append) {
+                if (isSet(newline) && true === newline) messageString += '<br/>';
+                $('.message-container.' + messageType).prepend(messageString).show();
+            } else {
+                $('.message-container.' + messageType).html(messageString).show();
+            }
+        } else {
+            $('.message-container.' + messageType).html('');
+        }
+    }, 100);
+}
+
+function isSet(obj) {
+    return 'undefined' === typeof (obj) ? false : true;
+}
+
+function escapeXml(unsafe) {
+    return unsafe.replace(/[<>&'"]/g, function (c) {
+        switch (c) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '\'': return '&apos;';
+            case '"': return '&quot;';
+        }
+    });
+}
+
+</script> 
+
